@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Realtime Shoutbox | Chat với cảm xúc</title>
+  <title>Realtime Shoutbox | Chat với cảm xúc + Refresh</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -45,9 +45,71 @@
       margin-bottom: 0.5rem;
     }
 
-    .sub {
+    /* Toolbar - Nút Refresh */
+    .toolbar {
+      background: white;
+      border-radius: 16px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .refresh-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 40px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .refresh-btn:hover {
+      background: #5a67d8;
+      transform: scale(0.98);
+    }
+
+    .refresh-btn:active {
+      transform: rotate(180deg);
+      transition: 0.3s;
+    }
+
+    .auto-refresh-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
       color: #64748b;
-      font-size: 0.9rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.active {
+      background: #10b981;
+    }
+
+    .status-dot.refreshing {
+      background: #f59e0b;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
     }
 
     /* Online stats */
@@ -55,7 +117,7 @@
       background: white;
       border-radius: 20px;
       padding: 1rem;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -68,20 +130,6 @@
       align-items: center;
       gap: 10px;
       font-size: 0.9rem;
-    }
-
-    .online-dot {
-      width: 10px;
-      height: 10px;
-      background: #10b981;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.2); }
-      100% { opacity: 1; transform: scale(1); }
     }
 
     /* Message Form */
@@ -230,35 +278,41 @@
       cursor: not-allowed;
     }
 
-    .pagination button.active {
-      background: #667eea;
-      color: white;
-    }
-
     .page-info {
       font-weight: bold;
       color: #1e293b;
-    }
-
-    /* Scrollbar */
-    .messages-grid::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    .messages-grid::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 10px;
-    }
-
-    .messages-grid::-webkit-scrollbar-thumb {
-      background: #888;
-      border-radius: 10px;
     }
 
     .loading {
       text-align: center;
       padding: 3rem;
       color: white;
+    }
+
+    /* Toast thông báo */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1e293b;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      z-index: 1000;
+      animation: slideInRight 0.3s ease;
+      display: none;
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
     }
 
     @media (max-width: 768px) {
@@ -269,44 +323,29 @@
         grid-template-columns: 1fr;
       }
     }
-    home-button {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  background: white;
-  color: #667eea;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transition: all 0.3s ease;
-  z-index: 1000;
-  font-size: 1.5rem;
-}
-.home-button:hover {
-  transform: scale(1.1);
-  background: #667eea;
-  color: white;
-}
   </style>
 </head>
 <body>
-    <a href="index.html" class="home-button" title="Quay về trang chủ">
-  <i class="fas fa-home"></i>
-</a>
 <div class="container">
   <div class="header">
     <h1><i class="fas fa-comments"></i> Realtime Shoutbox</h1>
-    <div class="sub">Chat ngay | Cảm xúc thật | Cập nhật realtime</div>
+    <div class="sub">Chat ngay | Cảm xúc thật | Realtime + Tự động làm mới</div>
+  </div>
+
+  <!-- Toolbar với nút Refresh -->
+  <div class="toolbar">
+    <button id="refreshBtn" class="refresh-btn">
+      <i class="fas fa-sync-alt"></i> Làm mới tin nhắn
+    </button>
+    <div class="auto-refresh-status">
+      <div class="status-dot active" id="autoRefreshDot"></div>
+      <span id="autoRefreshText">🔄 Tự động làm mới mỗi 30 giây</span>
+    </div>
   </div>
 
   <div class="online-stats">
     <div class="stat-item">
-      <div class="online-dot"></div>
+      <div class="status-dot active"></div>
       <span><strong id="onlineCount">0</strong> người đang online</span>
     </div>
     <div class="stat-item">
@@ -324,7 +363,7 @@
     <div class="form-row">
       <div class="form-group" style="min-width: 150px">
         <label><i class="fas fa-user"></i> Tên của bạn</label>
-        <input type="text" id="username" placeholder="Nhập tên..." value="Khách_" + Math.floor(Math.random() * 1000)>
+        <input type="text" id="username" placeholder="Nhập tên...">
       </div>
       <div class="form-group" style="flex: 2">
         <label><i class="fas fa-comment"></i> Tin nhắn</label>
@@ -357,6 +396,11 @@
   </div>
 </div>
 
+<!-- Toast thông báo -->
+<div id="toast" class="toast">
+  <i class="fas fa-check-circle"></i> <span id="toastMessage">Đã làm mới</span>
+</div>
+
 <script>
 (function() {
   // ===== CẤU HÌNH SUPABASE =====
@@ -373,6 +417,10 @@
   let totalMessages = 0;
   let onlineUsers = new Set();
   
+  // Auto refresh
+  let autoRefreshInterval = null;
+  let isRefreshing = false;
+  
   // DOM
   const messagesGrid = document.getElementById('messagesGrid');
   const usernameInput = document.getElementById('username');
@@ -385,6 +433,21 @@
   const totalPagesSpan = document.getElementById('totalPages');
   const totalMessagesSpan = document.getElementById('totalMessages');
   const onlineCountSpan = document.getElementById('onlineCount');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const autoRefreshDot = document.getElementById('autoRefreshDot');
+  const autoRefreshText = document.getElementById('autoRefreshText');
+  const toast = document.getElementById('toast');
+  const toastMessage = document.getElementById('toastMessage');
+  
+  // Hiển thị thông báo
+  function showToast(msg, isError = false) {
+    toastMessage.innerHTML = msg;
+    toast.style.backgroundColor = isError ? '#ef4444' : '#10b981';
+    toast.style.display = 'block';
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 2000);
+  }
   
   // Helper functions
   function formatTime(timestamp) {
@@ -405,13 +468,30 @@
     return div.innerHTML;
   }
   
-  // Load messages với phân trang
-  async function loadMessages() {
-    messagesGrid.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Đang tải...</div>';
+  // Hiệu ứng refresh trên nút
+  function animateRefreshButton() {
+    const icon = refreshBtn.querySelector('i');
+    icon.style.transform = 'rotate(180deg)';
+    icon.style.transition = '0.3s';
+    setTimeout(() => {
+      icon.style.transform = 'rotate(0deg)';
+    }, 300);
+  }
+  
+  // Load messages với phân trang (có thể force refresh)
+  async function loadMessages(showLoading = true, isManualRefresh = false) {
+    if (isManualRefresh) {
+      isRefreshing = true;
+      refreshBtn.disabled = true;
+      animateRefreshButton();
+    }
+    
+    if (showLoading && !isRefreshing) {
+      messagesGrid.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Đang tải...</div>';
+    }
     
     // Tính offset
     const start = (currentPage - 1) * messagesPerPage;
-    const end = start + messagesPerPage - 1;
     
     // Lấy tổng số tin nhắn
     const { count, error: countError } = await _supabase
@@ -432,16 +512,81 @@
       .from(TABLE_NAME)
       .select('*')
       .order('created_at', { ascending: false })
-      .range(start, end);
+      .range(start, start + messagesPerPage - 1);
     
     if (error) {
       messagesGrid.innerHTML = `<div class="loading">⚠️ Lỗi: ${error.message}</div>`;
+      if (isManualRefresh) showToast('Lỗi khi làm mới: ' + error.message, true);
       return;
     }
     
     messages = data || [];
     renderMessages();
     updatePaginationButtons();
+    
+    if (isManualRefresh) {
+      showToast('✅ Đã làm mới tin nhắn thành công!');
+      setTimeout(() => {
+        isRefreshing = false;
+        refreshBtn.disabled = false;
+      }, 500);
+    }
+  }
+  
+  // Tự động làm mới ngầm (không ảnh hưởng UI)
+  async function silentRefresh() {
+    if (isRefreshing) return;
+    
+    // Đổi màu dot thành vàng để báo hiệu đang refresh
+    autoRefreshDot.classList.remove('active');
+    autoRefreshDot.classList.add('refreshing');
+    autoRefreshText.innerHTML = '🔄 Đang làm mới dữ liệu...';
+    
+    try {
+      const start = (currentPage - 1) * messagesPerPage;
+      
+      const { count } = await _supabase
+        .from(TABLE_NAME)
+        .select('*', { count: 'exact', head: true });
+      
+      const { data, error } = await _supabase
+        .from(TABLE_NAME)
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(start, start + messagesPerPage - 1);
+      
+      if (!error && data) {
+        const hasNewMessages = JSON.stringify(messages) !== JSON.stringify(data);
+        messages = data;
+        totalMessages = count || 0;
+        totalMessagesSpan.textContent = totalMessages;
+        const totalPages = Math.ceil(totalMessages / messagesPerPage);
+        totalPagesSpan.textContent = totalPages || 1;
+        renderMessages();
+        updatePaginationButtons();
+        
+        if (hasNewMessages) {
+          // Chỉ hiện thông báo nhẹ khi có tin mới
+          autoRefreshText.innerHTML = '🔄 Có tin nhắn mới! Đã cập nhật';
+          setTimeout(() => {
+            autoRefreshText.innerHTML = '🔄 Tự động làm mới mỗi 30 giây';
+          }, 2000);
+        } else {
+          autoRefreshText.innerHTML = '🔄 Tự động làm mới mỗi 30 giây';
+        }
+      }
+    } catch (err) {
+      console.error('Silent refresh error:', err);
+      autoRefreshText.innerHTML = '⚠️ Lỗi kết nối, sẽ thử lại sau';
+    } finally {
+      autoRefreshDot.classList.remove('refreshing');
+      autoRefreshDot.classList.add('active');
+      setTimeout(() => {
+        if (autoRefreshText.innerHTML.includes('Lỗi')) {
+          autoRefreshText.innerHTML = '🔄 Tự động làm mới mỗi 30 giây';
+        }
+      }, 3000);
+    }
   }
   
   function renderMessages() {
@@ -470,7 +615,6 @@
       </div>
     `).join('');
     
-    // Auto scroll to top of grid
     messagesGrid.scrollTop = 0;
   }
   
@@ -498,7 +642,6 @@
       return;
     }
     
-    // Random avatar
     const avatars = ['😀', '😎', '🥳', '🤩', '👨‍💻', '👩‍🎨', '🦸', '🐱', '🐶', '🦄'];
     const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
     
@@ -518,14 +661,12 @@
       return;
     }
     
-    // Clear input
     messageInput.value = '';
     messageInput.focus();
     
-    // Chuyển về trang đầu tiên để xem tin nhắn mới
     if (currentPage !== 1) {
       currentPage = 1;
-      await loadMessages();
+      await loadMessages(true, false);
     }
   }
   
@@ -537,23 +678,15 @@
         { event: 'INSERT', schema: 'public', table: TABLE_NAME },
         async (payload) => {
           console.log('🔄 Tin nhắn mới:', payload.new);
-          // Reload messages để hiển thị tin mới
-          await loadMessages();
-          
-          // Hiệu ứng thông báo
-          if (Notification.permission === 'granted') {
-            new Notification('Tin nhắn mới từ ' + payload.new.username, {
-              body: payload.new.message,
-              icon: 'https://cdn-icons-png.flaticon.com/512/1946/1946429.png'
-            });
-          }
+          showToast(`💬 ${payload.new.username} vừa gửi tin nhắn!`);
+          await loadMessages(true, false);
         }
       )
       .on('postgres_changes',
         { event: 'DELETE', schema: 'public', table: TABLE_NAME },
         async () => {
           console.log('🗑️ Có tin nhắn bị xóa');
-          await loadMessages();
+          await loadMessages(true, false);
         }
       )
       .subscribe();
@@ -561,10 +694,26 @@
     return channel;
   }
   
+  // Khởi động auto refresh ngầm
+  function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => {
+      silentRefresh();
+    }, 30000); // 30 giây
+    console.log('✅ Auto refresh đã khởi động (30s)');
+  }
+  
+  function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+      clearInterval(autoRefreshInterval);
+      autoRefreshInterval = null;
+      console.log('⏸️ Auto refresh đã dừng');
+    }
+  }
+  
   // Online users simulation
   let heartbeatInterval;
   function startHeartbeat() {
-    // Simulate online users (random between 1-20)
     heartbeatInterval = setInterval(() => {
       const online = Math.floor(Math.random() * 20) + 5;
       onlineCountSpan.textContent = online;
@@ -576,28 +725,31 @@
     const totalPages = Math.ceil(totalMessages / messagesPerPage);
     if (currentPage < totalPages) {
       currentPage++;
-      loadMessages();
+      loadMessages(true, false);
     }
   }
   
   function prevPage() {
     if (currentPage > 1) {
       currentPage--;
-      loadMessages();
+      loadMessages(true, false);
     }
   }
   
-  // Enter key to send
+  // Event listeners
   messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       sendMessage();
     }
   });
   
-  // Request notification permission
-  if (Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
+  refreshBtn.addEventListener('click', () => {
+    loadMessages(true, true);
+  });
+  
+  sendBtn.addEventListener('click', sendMessage);
+  prevPageBtn.addEventListener('click', prevPage);
+  nextPageBtn.addEventListener('click', nextPage);
   
   // Set random username if empty
   if (!usernameInput.value) {
@@ -605,22 +757,28 @@
     usernameInput.value = `Khách_${randomNum}`;
   }
   
-  // Event listeners
-  sendBtn.addEventListener('click', sendMessage);
-  prevPageBtn.addEventListener('click', prevPage);
-  nextPageBtn.addEventListener('click', nextPage);
+  // Request notification permission
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
   
   // Initialize
   async function init() {
-    await loadMessages();
+    await loadMessages(true, false);
     setupRealtime();
+    startAutoRefresh(); // Khởi động auto refresh ngầm
     startHeartbeat();
     
-    // Auto refresh mỗi 30 giây để cập nhật timestamp
+    // Auto refresh timestamp mỗi phút
     setInterval(() => {
       renderMessages();
-    }, 30000);
+    }, 60000);
   }
+  
+  // Dọn dẹp khi đóng trang
+  window.addEventListener('beforeunload', () => {
+    stopAutoRefresh();
+  });
   
   init();
 })();
