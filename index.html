@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Trung tâm Ứng dụng | Smart Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Header chính */
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .dashboard-header h1 {
+            font-size: 2.8rem;
+            background: linear-gradient(120deg, #a5f3fc, #c084fc, #f0abfc);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.02em;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .dashboard-header h1 span {
+            font-size: 2.5rem;
+        }
+
+        .subhead {
+            color: #94a3b8;
+            margin-top: 0.75rem;
+            font-size: 1.1rem;
+            border-top: 1px solid #334155;
+            display: inline-block;
+            padding-top: 0.75rem;
+        }
+
+        /* Grid thẻ ứng dụng */
+        .app-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        /* Card */
+        .app-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 2rem;
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            overflow: hidden;
+            transition: all 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .app-card:hover {
+            transform: translateY(-8px);
+            border-color: #8b5cf6;
+            box-shadow: 0 25px 40px -12px rgba(139, 92, 246, 0.3);
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        /* Header từng app với icon đặc trưng */
+        .card-header {
+            padding: 1.5rem 1.5rem 1rem 1.5rem;
+            border-bottom: 2px solid rgba(100, 116, 139, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .app-icon {
+            font-size: 2.5rem;
+            background: #1e293b;
+            width: 58px;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1.25rem;
+            box-shadow: 0 8px 14px -6px black;
+        }
+
+        .app-title {
+            flex: 1;
+        }
+
+        .app-title h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            letter-spacing: -0.3px;
+        }
+
+        .app-title p {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        /* Nội dung mô tả */
+        .card-description {
+            padding: 1.25rem 1.5rem;
+            flex: 1;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border-bottom: 1px solid #334155;
+        }
+
+        .feature-list {
+            margin-top: 12px;
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .feature-list li {
+            background: #0f172a;
+            padding: 4px 10px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #a5f3fc;
+            border: 1px solid #2d3a5e;
+        }
+
+        /* Nút truy cập */
+        .card-action {
+            padding: 1.2rem 1.5rem 1.5rem;
+            text-align: center;
+        }
+
+        .launch-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(95deg, #3b82f6, #8b5cf6);
+            padding: 0.8rem 1.8rem;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 1rem;
+            color: white;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 6px 14px rgba(59,130,246,0.3);
+            border: none;
+            cursor: pointer;
+        }
+
+        .launch-btn:hover {
+            transform: scale(1.03);
+            background: linear-gradient(95deg, #2563eb, #7c3aed);
+            box-shadow: 0 10px 20px -5px rgba(139,92,246,0.5);
+        }
+
+        /* Footer */
+        .footer-note {
+            text-align: center;
+            margin-top: 3.5rem;
+            color: #64748b;
+            font-size: 0.85rem;
+            border-top: 1px solid #334155;
+            padding-top: 2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .badge-supabase {
+            background: #1e293b;
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-family: monospace;
+            font-size: 0.7rem;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 680px) {
+            body {
+                padding: 1rem;
+            }
+            .dashboard-header h1 {
+                font-size: 1.9rem;
+            }
+            .app-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 2rem;
+            }
+            .app-title h2 {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <h1>
+            <span>⚡</span> 
+            Smart App Hub
+            <span>🚀</span>
+        </h1>
+        <div class="subhead">
+            ✨ 5 ứng dụng kết nối Supabase · Realtime · CRUD · Analytics ✨
+        </div>
+        <div class="badge-supabase">
+            🗄️ Mỗi ứng dụng có thư mục riêng & index.html độc lập
+        </div>
+    </div>
+
+    <div class="app-grid">
+        
+        <!-- Ứng dụng 1: Todo Board -->
+        <div class="app-card">
+            <div class="card-header">
+                <div class="app-icon">📋</div>
+                <div class="app-title">
+                    <h2>Smart Todo Board</h2>
+                    <p>Ghi chú thông minh + ưu tiên</p>
+                </div>
+            </div>
+            <div class="card-description">
+                <strong>🎯 CRUD + Lọc + Ghim</strong><br>
+                • Thêm ghi chú 🔴🟡🟢<br>
+                • Lọc theo ưu tiên / trạng thái<br>
+                • Ghim ⭐ lên đầu & xóa 🗑<br>
+                • Đồng bộ Supabase realtime cơ bản
+                <ul class="feature-list">
+                    <li>🔴 Gấp</li>
+                    <li>🟡 Bình thường</li>
+                    <li>🟢 Thong thả</li>
+                    <li>⭐ Ghim</li>
+                </ul>
+            </div>
+            <div class="card-action">
+                <a href="todo.html" class="launch-btn">
+                    🚪 Mở Todo Board →
+                </a>
+            </div>
+        </div>
+
+        <!-- Ứng dụng 2: Mini E-Commerce Stock -->
+        <div class="app-card">ni E‑Commerce</h2>
+                    <p>Quản lý kho & giỏ hàng</p>
+                </div>
+            </div>
+            <div class="card-description">
+                <strong>📦 Cập nhật tồn kho & Admin Panel</strong><br>
+                • Hiển thị sản phẩm + ảnh + giá + số lượng<br>
+                • Nút Mua ➖ tự động trừ kho, hết hàng 🚫<br>
+                • Admin: ➕ / ➖ nhập hàng trực tiếp<br>
+                • Tích hợp Supabase realtime stock
+                <ul class="feature-list">
+                    <li>🛍 Giỏ hàng động</li>
+                    <li>💰 Thẻ giá</li>
+                    <li>➕ Nhập kho</li>
+                </ul>
+            </div>
+            <div class="card-action">
+                <a href="stock-final.html" class="launch-btn">
+                    🛒 Vào Mini Store →
+                </a>
+            </div>
+        </div>
+
+        <!-- Ứng dụng 3: Realtime Shoutbox Chat -->
+        <div class="app-card">
+            <div class="card-header">
+                <div class="app-icon">💬</div>
+                <div class="app-title">
+                    <h2>Realtime Shoutbox</h2>
+                    <p>Chat + thả cảm xúc</p>
+                </div>
+            </div>
+            <div class="card-description">
+                <strong>⚡ Listeners & Realtime đồng bộ</strong><br>
+                • Gửi tin nhắn với biệt danh ✨<br>
+                • Cập nhật tức thì mọi trình duyệt<br>
+                • ❤️ / 👍 Thả tim tăng tương tác realtime<br>
+                • Hiệu ứng tên lửa 🚀 gửi tin
+                <ul class="feature-list">
+                    <li>💬 Bong bóng chat</li>
+                    <li>🚀 Gửi nhanh</li>
+                    <li>❤️ Thả cảm xúc</li>
+                </ul>
+            </div>
+            <div class="card-action">
+                <a href="shoutbox.html" class="launch-btn">
+                    💬 Vào Phòng Chat →
+                </a>
+            </div>
+        </div>
+
+        <!-- Ứng dụng 4: Voting Poll -->
+        <div class="app-card">
+            <div class="card-header">
+                <div class="app-icon">🗳️</div>
+                <div class="app-title">
+                    <h2>Voting Poll</h2>
+                    <p>Biểu quyết & thanh %</p>
+                </div>
+            </div>
+            <div class="card-description">
+                <strong>📊 Aggregate + Progress Bar</strong><br>
+                • Câu hỏi: "Công nghệ AI nào bạn quan tâm?"<br>
+                • LLMs 🧠 · CV 👁 · TTS 🗣<br>
+                • Insert vote → tính % realtime<br>
+                • Thanh tiến trình trực quan + ✅ dấu tích
+                <ul class="feature-list">
+                    <li>🗳 Hòm phiếu</li>
+                    <li>📈 Biểu đồ xu hướng</li>
+                    <li>✅ Xác nhận vote</li>
+                </ul>
+            </div>
+            <div class="card-action">
+                <a href="voting-poll.html" class="launch-btn">
+                    🗳 Tham gia bình chọn →
+                </a>
+            </div>
+        </div>
+
+        <!-- Ứng dụng 5: Audio Bookmark & Rating -->
+        <div class="app-card">
+            <div class="card-header">
+                <div class="app-icon">🎵</div>
+                <div class="app-title">
+                    <h2>Audio Rating</h2>
+                    <p>Đánh giá sao & tìm kiếm</p>
+                </div>
+            </div>
+            <div class="card-description">
+                <strong>⭐ Rating 5 sao + Tìm kiếm nâng cao</strong><br>
+                • Danh sách bài hát: tên, ca sĩ, link nhúng<br>
+                • Chấm sao 1-5 (cập nhật DB)<br>
+                • 🔍 Tìm kiếm realtime theo tên/ca sĩ (.ilike)<br>
+                • ▶️ Play thử nhúng YouTube/Spotify
+                <ul class="feature-list">
+                    <li>🎵 Nốt nhạc đại diện</li>
+                    <li>⭐ Hệ thống sao vàng/xám</li>
+                    <li>🔍 Gõ tìm tức thì</li>
+                </ul>
+            </div>
+            <div class="card-action">
+                <a href="audio-bookmark.html" class="launch-btn">
+                    🎧 Khám phá Audio →
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        🧩 Mỗi ứng dụng nằm trong thư mục riêng biệt (<strong>todo-board/ , mini-e/ , realtime/ , voting/ , audio/</strong>)<br>
+        ⚙️ Tất cả đều kết nối Supabase với bảng riêng (todos, products, messages, votes, songs). <br>
+        📌 Yêu cầu: Cấu hình file .env hoặc nhúng trực tiếp supabaseUrl, supabaseKey trong từng ứng dụng (demo ready).<br>
+        💡 Thiết kế đáp ứng, icon tương tác đầy đủ theo từng yêu cầu đề bài.
+    </div>
+</body>
+</html>

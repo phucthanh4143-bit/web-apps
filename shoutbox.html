@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Realtime Shoutbox | Chat với cảm xúc</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      background: white;
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    .sub {
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+
+    /* Online stats */
+    .online-stats {
+      background: white;
+      border-radius: 20px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .online-dot {
+      width: 10px;
+      height: 10px;
+      background: #10b981;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Message Form */
+    .message-form {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 20px;
+      margin-bottom: 2rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 1rem;
+      align-items: end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .form-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #475569;
+    }
+
+    input, select, button {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.9rem;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+    }
+
+    /* Messages Grid */
+    .messages-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+      max-height: 500px;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+
+    .message-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1rem;
+      transition: 0.2s;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .avatar {
+      font-size: 2rem;
+    }
+
+    .user-info {
+      flex: 1;
+    }
+
+    .username {
+      font-weight: bold;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .timestamp {
+      font-size: 0.7rem;
+      color: #94a3b8;
+    }
+
+    .emotion {
+      font-size: 1.5rem;
+    }
+
+    .message-content {
+      color: #334155;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      background: white;
+      padding: 1rem;
+      border-radius: 20px;
+    }
+
+    .pagination button {
+      padding: 8px 16px;
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pagination button.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .page-info {
+      font-weight: bold;
+      color: #1e293b;
+    }
+
+    /* Scrollbar */
+    .messages-grid::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .messages-grid::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .messages-grid::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 10px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      .messages-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    home-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: white;
+  color: #667eea;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  font-size: 1.5rem;
+}
+.home-button:hover {
+  transform: scale(1.1);
+  background: #667eea;
+  color: white;
+}
+  </style>
+</head>
+<body>
+    <a href="index.html" class="home-button" title="Quay về trang chủ">
+  <i class="fas fa-home"></i>
+</a>
+<div class="container">
+  <div class="header">
+    <h1><i class="fas fa-comments"></i> Realtime Shoutbox</h1>
+    <div class="sub">Chat ngay | Cảm xúc thật | Cập nhật realtime</div>
+  </div>
+
+  <div class="online-stats">
+    <div class="stat-item">
+      <div class="online-dot"></div>
+      <span><strong id="onlineCount">0</strong> người đang online</span>
+    </div>
+    <div class="stat-item">
+      <i class="fas fa-comment"></i>
+      <span>Tổng số tin nhắn: <strong id="totalMessages">0</strong></span>
+    </div>
+    <div class="stat-item">
+      <i class="fas fa-trash-alt"></i>
+      <span>Tự động xóa sau 24h</span>
+    </div>
+  </div>
+
+  <!-- Form gửi tin nhắn -->
+  <div class="message-form">
+    <div class="form-row">
+      <div class="form-group" style="min-width: 150px">
+        <label><i class="fas fa-user"></i> Tên của bạn</label>
+        <input type="text" id="username" placeholder="Nhập tên..." value="Khách_" + Math.floor(Math.random() * 1000)>
+      </div>
+      <div class="form-group" style="flex: 2">
+        <label><i class="fas fa-comment"></i> Tin nhắn</label>
+        <input type="text" id="message" placeholder="Nhập tin nhắn..." autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-smile"></i> Cảm xúc</label>
+        <select id="emotion">
+          <option>😊</option>
+          <option>😂</option>
+          <option>😍</option>
+          <option>😢</option>
+          <option>😡</option>
+          <option>🎉</option>
+          <option>👍</option>
+        </select>
+      </div>
+      <button id="sendBtn"><i class="fas fa-paper-plane"></i> Gửi</button>
+    </div>
+  </div>
+
+  <!-- Grid hiển thị tin nhắn -->
+  <div id="messagesGrid" class="messages-grid">Đang tải tin nhắn...</div>
+
+  <!-- Phân trang -->
+  <div class="pagination" id="pagination">
+    <button id="prevPage" disabled><i class="fas fa-chevron-left"></i> Trước</button>
+    <span class="page-info">Trang <span id="currentPage">1</span> / <span id="totalPages">1</span></span>
+    <button id="nextPage">Sau <i class="fas fa-chevron-right"></i></button>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ===== CẤU HÌNH SUPABASE =====
+  const MY_URL = 'https://ulsaoohiyyfwntytxout.supabase.co';
+  const MY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsc2Fvb2hpeXlmd250eXR4b3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyODY4MjUsImV4cCI6MjA5Njg2MjgyNX0.pK66OodAYG4YTk6kUox6IWtqL4c1bHagNs6aMnjQunc';
+  
+  const _supabase = window.supabase.createClient(MY_URL, MY_KEY);
+  const TABLE_NAME = 'shoutbox';
+  
+  // State
+  let messages = [];
+  let currentPage = 1;
+  const messagesPerPage = 6;
+  let totalMessages = 0;
+  let onlineUsers = new Set();
+  
+  // DOM
+  const messagesGrid = document.getElementById('messagesGrid');
+  const usernameInput = document.getElementById('username');
+  const messageInput = document.getElementById('message');
+  const emotionSelect = document.getElementById('emotion');
+  const sendBtn = document.getElementById('sendBtn');
+  const prevPageBtn = document.getElementById('prevPage');
+  const nextPageBtn = document.getElementById('nextPage');
+  const currentPageSpan = document.getElementById('currentPage');
+  const totalPagesSpan = document.getElementById('totalPages');
+  const totalMessagesSpan = document.getElementById('totalMessages');
+  const onlineCountSpan = document.getElementById('onlineCount');
+  
+  // Helper functions
+  function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return 'Vừa xong';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} phút trước`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} giờ trước`;
+    return date.toLocaleDateString('vi-VN');
+  }
+  
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  
+  // Load messages với phân trang
+  async function loadMessages() {
+    messagesGrid.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Đang tải...</div>';
+    
+    // Tính offset
+    const start = (currentPage - 1) * messagesPerPage;
+    const end = start + messagesPerPage - 1;
+    
+    // Lấy tổng số tin nhắn
+    const { count, error: countError } = await _supabase
+      .from(TABLE_NAME)
+      .select('*', { count: 'exact', head: true });
+    
+    if (countError) {
+      console.error('Lỗi đếm:', countError);
+    } else {
+      totalMessages = count || 0;
+      totalMessagesSpan.textContent = totalMessages;
+      const totalPages = Math.ceil(totalMessages / messagesPerPage);
+      totalPagesSpan.textContent = totalPages || 1;
+    }
+    
+    // Lấy tin nhắn theo trang
+    const { data, error } = await _supabase
+      .from(TABLE_NAME)
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(start, end);
+    
+    if (error) {
+      messagesGrid.innerHTML = `<div class="loading">⚠️ Lỗi: ${error.message}</div>`;
+      return;
+    }
+    
+    messages = data || [];
+    renderMessages();
+    updatePaginationButtons();
+  }
+  
+  function renderMessages() {
+    if (messages.length === 0) {
+      messagesGrid.innerHTML = '<div class="loading">✨ Chưa có tin nhắn nào. Hãy là người đầu tiên!</div>';
+      return;
+    }
+    
+    messagesGrid.innerHTML = messages.map(msg => `
+      <div class="message-card">
+        <div class="message-header">
+          <div class="avatar">${escapeHtml(msg.user_avatar || '👤')}</div>
+          <div class="user-info">
+            <div class="username">
+              <strong>${escapeHtml(msg.username)}</strong>
+              <span class="emotion">${msg.emotion || '😊'}</span>
+            </div>
+            <div class="timestamp">
+              <i class="far fa-clock"></i> ${formatTime(msg.created_at)}
+            </div>
+          </div>
+        </div>
+        <div class="message-content">
+          ${escapeHtml(msg.message)}
+        </div>
+      </div>
+    `).join('');
+    
+    // Auto scroll to top of grid
+    messagesGrid.scrollTop = 0;
+  }
+  
+  function updatePaginationButtons() {
+    const totalPages = Math.ceil(totalMessages / messagesPerPage);
+    currentPageSpan.textContent = currentPage;
+    
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+  }
+  
+  // Gửi tin nhắn mới
+  async function sendMessage() {
+    const username = usernameInput.value.trim();
+    const message = messageInput.value.trim();
+    const emotion = emotionSelect.value;
+    
+    if (!username) {
+      alert('Vui lòng nhập tên của bạn');
+      return;
+    }
+    
+    if (!message) {
+      alert('Vui lòng nhập tin nhắn');
+      return;
+    }
+    
+    // Random avatar
+    const avatars = ['😀', '😎', '🥳', '🤩', '👨‍💻', '👩‍🎨', '🦸', '🐱', '🐶', '🦄'];
+    const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+    
+    const newMessage = {
+      username: username,
+      message: message,
+      emotion: emotion,
+      user_avatar: randomAvatar
+    };
+    
+    const { error } = await _supabase
+      .from(TABLE_NAME)
+      .insert([newMessage]);
+    
+    if (error) {
+      alert('Gửi tin nhắn thất bại: ' + error.message);
+      return;
+    }
+    
+    // Clear input
+    messageInput.value = '';
+    messageInput.focus();
+    
+    // Chuyển về trang đầu tiên để xem tin nhắn mới
+    if (currentPage !== 1) {
+      currentPage = 1;
+      await loadMessages();
+    }
+  }
+  
+  // Realtime subscription
+  function setupRealtime() {
+    const channel = _supabase
+      .channel('shoutbox-realtime')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: TABLE_NAME },
+        async (payload) => {
+          console.log('🔄 Tin nhắn mới:', payload.new);
+          // Reload messages để hiển thị tin mới
+          await loadMessages();
+          
+          // Hiệu ứng thông báo
+          if (Notification.permission === 'granted') {
+            new Notification('Tin nhắn mới từ ' + payload.new.username, {
+              body: payload.new.message,
+              icon: 'https://cdn-icons-png.flaticon.com/512/1946/1946429.png'
+            });
+          }
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: TABLE_NAME },
+        async () => {
+          console.log('🗑️ Có tin nhắn bị xóa');
+          await loadMessages();
+        }
+      )
+      .subscribe();
+    
+    return channel;
+  }
+  
+  // Online users simulation
+  let heartbeatInterval;
+  function startHeartbeat() {
+    // Simulate online users (random between 1-20)
+    heartbeatInterval = setInterval(() => {
+      const online = Math.floor(Math.random() * 20) + 5;
+      onlineCountSpan.textContent = online;
+    }, 5000);
+  }
+  
+  // Pagination handlers
+  function nextPage() {
+    const totalPages = Math.ceil(totalMessages / messagesPerPage);
+    if (currentPage < totalPages) {
+      currentPage++;
+      loadMessages();
+    }
+  }
+  
+  function prevPage() {
+    if (currentPage > 1) {
+      currentPage--;
+      loadMessages();
+    }
+  }
+  
+  // Enter key to send
+  messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  });
+  
+  // Request notification permission
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  
+  // Set random username if empty
+  if (!usernameInput.value) {
+    const randomNum = Math.floor(Math.random() * 1000);
+    usernameInput.value = `Khách_${randomNum}`;
+  }
+  
+  // Event listeners
+  sendBtn.addEventListener('click', sendMessage);
+  prevPageBtn.addEventListener('click', prevPage);
+  nextPageBtn.addEventListener('click', nextPage);
+  
+  // Initialize
+  async function init() {
+    await loadMessages();
+    setupRealtime();
+    startHeartbeat();
+    
+    // Auto refresh mỗi 30 giây để cập nhật timestamp
+    setInterval(() => {
+      renderMessages();
+    }, 30000);
+  }
+  
+  init();
+})();
+</script>
+</body>
+</html>

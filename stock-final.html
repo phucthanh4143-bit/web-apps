@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini E-Commerce Stock</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+    body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:2rem;min-height:100vh}
+    .container{max-width:1600px;margin:0 auto}
+    .header{background:white;border-radius:20px;padding:1.5rem;margin-bottom:2rem;box-shadow:0 10px 30px rgba(0,0,0,0.1)}
+    h1{display:flex;align-items:center;gap:12px;color:#1e293b;margin-bottom:0.5rem}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}
+    .stat-card{background:white;padding:1.2rem;border-radius:16px;text-align:center;transition:transform 0.2s}
+    .stat-card:hover{transform:translateY(-5px)}
+    .stat-card i{font-size:2rem;color:#667eea;margin-bottom:0.5rem}
+    .stat-value{font-size:1.8rem;font-weight:bold;color:#1e293b}
+    .product-form{background:white;padding:1.5rem;border-radius:20px;margin-bottom:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;align-items:end}
+    .form-group{display:flex;flex-direction:column;gap:0.3rem}
+    .form-group label{font-size:0.75rem;font-weight:600;text-transform:uppercase;color:#475569}
+    input,select,button{padding:10px 12px;border-radius:12px;border:1px solid #cbd5e1;font-size:0.9rem}
+    button{background:#667eea;color:white;font-weight:bold;border:none;cursor:pointer;transition:0.2s}
+    button:hover{background:#5a67d8;transform:translateY(-2px)}
+    .btn-danger{background:#ef4444}
+    .btn-danger:hover{background:#dc2626}
+    .controls{display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap}
+    .search-box{flex:1;background:white;border-radius:12px;padding:0.5rem 1rem;display:flex;align-items:center;gap:0.5rem}
+    .search-box input{flex:1;border:none;outline:none;padding:0.5rem}
+    .category-filter{background:white;padding:0.5rem;border-radius:12px;display:flex;gap:0.5rem;flex-wrap:wrap}
+    .cat-btn{background:#e2e8f0;color:#1e293b;border:none;padding:6px 16px;border-radius:20px;cursor:pointer;transition:0.2s}
+    .cat-btn.active{background:#667eea;color:white}
+    .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem}
+    .product-card{background:white;border-radius:20px;padding:1.2rem;box-shadow:0 4px 6px rgba(0,0,0,0.1);transition:0.2s;position:relative}
+    .product-card:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(0,0,0,0.15)}
+    .product-card.low-stock{border:2px solid #ef4444;background:#fef2f2}
+    .badge{position:absolute;top:-10px;right:10px;background:#ef4444;color:white;padding:4px 8px;border-radius:20px;font-size:0.7rem;font-weight:bold}
+    .card-actions{display:flex;gap:0.5rem;margin-top:1rem}
+    .card-actions button{flex:1;padding:0.5rem;font-size:0.8rem}
+    .loading{text-align:center;padding:3rem;color:white}
+    .home-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: white;
+  color: #667eea;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  font-size: 1.5rem;
+}
+.home-button:hover {
+  transform: scale(1.1);
+  background: #667eea;
+  color: white;
+}
+  </style>
+</head>
+<body>
+  <a href="index.html" class="home-button" title="Quay về trang chủ">
+  <i class="fas fa-home"></i>
+</a>
+<div class="container">
+  <div class="header">
+    <h1><i class="fas fa-boxes"></i> Mini E-Commerce Stock</h1>
+    <div style="color:#64748b">Quản lý kho hàng | CRUD + Realtime + Tìm kiếm + Cảnh báo tồn kho</div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><i class="fas fa-box"></i><div class="stat-value" id="totalProducts">0</div><div style="font-size:0.8rem;color:#64748b">Tổng sản phẩm</div></div>
+    <div class="stat-card"><i class="fas fa-exclamation-triangle"></i><div class="stat-value" id="lowStockCount">0</div><div style="font-size:0.8rem;color:#64748b">Sắp hết hàng</div></div>
+    <div class="stat-card"><i class="fas fa-dollar-sign"></i><div class="stat-value" id="totalValue">0</div><div style="font-size:0.8rem;color:#64748b">Tổng giá trị kho</div></div>
+    <div class="stat-card"><i class="fas fa-chart-line"></i><div class="stat-value" id="avgPrice">0</div><div style="font-size:0.8rem;color:#64748b">Giá trung bình</div></div>
+  </div>
+
+  <div class="product-form">
+    <div class="form-group"><label><i class="fas fa-tag"></i> Tên sản phẩm</label><input type="text" id="productName" placeholder="VD: Tai nghe Sony"></div>
+    <div class="form-group"><label><i class="fas fa-th-large"></i> Danh mục</label><select id="category"><option>Điện tử</option><option>Thời trang</option><option>Gia dụng</option><option>Mỹ phẩm</option><option>Thực phẩm</option></select></div>
+    <div class="form-group"><label><i class="fas fa-dollar-sign"></i> Giá (VNĐ)</label><input type="number" id="price" step="1000"></div>
+    <div class="form-group"><label><i class="fas fa-cubes"></i> Số lượng</label><input type="number" id="quantity" min="0"></div>
+    <div class="form-group"><label><i class="fas fa-barcode"></i> Mã SKU</label><input type="text" id="sku" placeholder="Mã sản phẩm"></div>
+    <div class="form-group"><label><i class="fas fa-chart-line"></i> Ngưỡng cảnh báo</label><input type="number" id="threshold" value="5"></div>
+    <button id="saveBtn"><i class="fas fa-save"></i> Lưu sản phẩm</button>
+    <button id="cancelBtn" class="btn-danger" style="display:none"><i class="fas fa-times"></i> Hủy</button>
+  </div>
+
+  <div class="controls">
+    <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Tìm kiếm sản phẩm..."></div>
+    <div class="category-filter" id="categoryFilter">
+      <button data-cat="all" class="cat-btn active">Tất cả</button>
+      <button data-cat="Điện tử" class="cat-btn">Điện tử</button>
+      <button data-cat="Thời trang" class="cat-btn">Thời trang</button>
+      <button data-cat="Gia dụng" class="cat-btn">Gia dụng</button>
+      <button data-cat="Mỹ phẩm" class="cat-btn">Mỹ phẩm</button>
+      <button data-cat="Thực phẩm" class="cat-btn">Thực phẩm</button>
+    </div>
+  </div>
+
+  <div id="productsGrid" class="products-grid">Đang tải dữ liệu...</div>
+</div>
+
+<script>
+(function() {
+  // ===== CẤU HÌNH - THAY URL VÀ KEY CỦA BẠN =====
+  const MY_URL = 'https://ulsaoohiyyfwntytxout.supabase.co';
+  const MY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsc2Fvb2hpeXlmd250eXR4b3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyODY4MjUsImV4cCI6MjA5Njg2MjgyNX0.pK66OodAYG4YTk6kUox6IWtqL4c1bHagNs6aMnjQunc';
+  
+  // Khởi tạo client
+  const _supabase = window.supabase.createClient(MY_URL, MY_KEY);
+  
+  // State
+  let products = [];
+  let currentFilter = 'all';
+  let searchKeyword = '';
+  let editingId = null;
+  
+  // DOM
+  const grid = document.getElementById('productsGrid');
+  const nameInp = document.getElementById('productName');
+  const catInp = document.getElementById('category');
+  const priceInp = document.getElementById('price');
+  const qtyInp = document.getElementById('quantity');
+  const skuInp = document.getElementById('sku');
+  const thresInp = document.getElementById('threshold');
+  const saveBtn = document.getElementById('saveBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const searchInp = document.getElementById('searchInput');
+  
+  function formatCurrency(v) {
+    return new Intl.NumberFormat('vi-VN', {style:'currency', currency:'VND'}).format(v);
+  }
+  
+  function escape(s) {
+    if(!s) return '';
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+  
+  async function load() {
+    grid.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Đang tải...</div>';
+    const {data, error} = await _supabase.from('ecommerce_stock').select('*').order('created_at', {ascending:false});
+    if(error) {
+      grid.innerHTML = `<div class="loading">⚠️ Lỗi: ${error.message}</div>`;
+      return;
+    }
+    products = data || [];
+    updateStats();
+    render();
+  }
+  
+  function updateStats() {
+    const total = products.length;
+    const low = products.filter(p => p.quantity <= p.low_stock_threshold).length;
+    const totalVal = products.reduce((s,p) => s + (p.price * p.quantity), 0);
+    const avg = total > 0 ? totalVal / total : 0;
+    document.getElementById('totalProducts').textContent = total;
+    document.getElementById('lowStockCount').textContent = low;
+    document.getElementById('totalValue').textContent = formatCurrency(totalVal);
+    document.getElementById('avgPrice').textContent = formatCurrency(avg);
+  }
+  
+  function render() {
+    let filtered = [...products];
+    if(currentFilter !== 'all') filtered = filtered.filter(p => p.category === currentFilter);
+    if(searchKeyword.trim()) {
+      const kw = searchKeyword.toLowerCase();
+      filtered = filtered.filter(p => p.product_name.toLowerCase().includes(kw) || p.sku.toLowerCase().includes(kw));
+    }
+    
+    if(filtered.length === 0) {
+      grid.innerHTML = '<div class="loading">✨ Không tìm thấy sản phẩm nào</div>';
+      return;
+    }
+    
+    grid.innerHTML = filtered.map(p => {
+      const isLow = p.quantity <= p.low_stock_threshold;
+      return `
+        <div class="product-card ${isLow ? 'low-stock' : ''}">
+          ${isLow ? '<div class="badge"><i class="fas fa-exclamation"></i> Sắp hết</div>' : ''}
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <strong>${escape(p.product_name)}</strong>
+            <span style="font-size:0.7rem;color:#94a3b8">${p.sku}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">
+            <div><span style="color:#64748b">📁</span> ${p.category}</div>
+            <div><span style="color:#64748b">💰</span> ${formatCurrency(p.price)}</div>
+            <div><span style="color:#64748b">📦</span> <strong style="color:${isLow ? '#ef4444' : '#1e293b'}">${p.quantity}</strong></div>
+            <div><span style="color:#64748b">⚠️</span> ${p.low_stock_threshold}</div>
+          </div>
+          <div class="card-actions">
+            <button class="edit-btn" data-id="${p.id}"><i class="fas fa-edit"></i> Sửa</button>
+            <button class="delete-btn" data-id="${p.id}"><i class="fas fa-trash"></i> Xóa</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.getAttribute('data-id');
+        const p = products.find(x => x.id === id);
+        if(p) {
+          editingId = p.id;
+          nameInp.value = p.product_name;
+          catInp.value = p.category;
+          priceInp.value = p.price;
+          qtyInp.value = p.quantity;
+          skuInp.value = p.sku;
+          thresInp.value = p.low_stock_threshold;
+          saveBtn.innerHTML = '<i class="fas fa-edit"></i> Cập nhật';
+          cancelBtn.style.display = 'block';
+        }
+      };
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const p = products.find(x => x.id === id);
+        if(p && confirm(`Xóa "${p.product_name}"?`)) {
+          await _supabase.from('ecommerce_stock').delete().eq('id', id);
+          await load();
+        }
+      };
+    });
+  }
+  
+  async function save() {
+    if(!nameInp.value.trim()) return alert('Nhập tên sản phẩm');
+    if(!skuInp.value.trim()) return alert('Nhập mã SKU');
+    if(priceInp.value <= 0) return alert('Giá phải lớn hơn 0');
+    
+    const data = {
+      product_name: nameInp.value.trim(),
+      category: catInp.value,
+      price: parseFloat(priceInp.value),
+      quantity: parseInt(qtyInp.value) || 0,
+      sku: skuInp.value.trim().toUpperCase(),
+      low_stock_threshold: parseInt(thresInp.value) || 5
+    };
+    
+    let err;
+    if(editingId) {
+      const {error} = await _supabase.from('ecommerce_stock').update(data).eq('id', editingId);
+      err = error;
+    } else {
+      const {error} = await _supabase.from('ecommerce_stock').insert([data]);
+      err = error;
+    }
+    
+    if(err) alert('Lỗi: ' + err.message);
+    else {
+      editingId = null;
+      nameInp.value = '';
+      catInp.value = 'Điện tử';
+      priceInp.value = '';
+      qtyInp.value = '';
+      skuInp.value = '';
+      thresInp.value = '5';
+      saveBtn.innerHTML = '<i class="fas fa-save"></i> Lưu sản phẩm';
+      cancelBtn.style.display = 'none';
+      await load();
+    }
+  }
+  
+  // Filters
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.getAttribute('data-cat');
+      render();
+    };
+  });
+  
+  searchInp.oninput = (e) => {
+    searchKeyword = e.target.value;
+    render();
+  };
+  
+  saveBtn.onclick = save;
+  cancelBtn.onclick = () => {
+    editingId = null;
+    nameInp.value = '';
+    catInp.value = 'Điện tử';
+    priceInp.value = '';
+    qtyInp.value = '';
+    skuInp.value = '';
+    thresInp.value = '5';
+    saveBtn.innerHTML = '<i class="fas fa-save"></i> Lưu sản phẩm';
+    cancelBtn.style.display = 'none';
+  };
+  
+  // Realtime
+  _supabase.channel('stock-changes')
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'ecommerce_stock'}, () => load())
+    .subscribe();
+  
+  // Start
+  load();
+})();
+</script>
+</body>
+</html>

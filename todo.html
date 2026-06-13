@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Todo Board | Supabase + Vanilla JS</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, 'Segoe UI', sans-serif; }
+    body { background: #f1f5f9; padding: 2rem; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 12px; }
+    .sub { color: #334155; margin-bottom: 2rem; border-left: 4px solid #3b82f6; padding-left: 1rem; }
+    .todo-form { background: white; padding: 1.5rem; border-radius: 24px; box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05); margin-bottom: 2rem; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .form-group { flex: 1; min-width: 150px; }
+    .form-group label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #475569; margin-bottom: 4px; }
+    input, select, button { padding: 10px 12px; border-radius: 16px; border: 1px solid #cbd5e1; font-size: 0.9rem; width: 100%; }
+    button { background: #3b82f6; color: white; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; width: auto; padding: 10px 20px; }
+    button:hover { background: #2563eb; }
+    .filters { display: flex; gap: 12px; margin-bottom: 2rem; flex-wrap: wrap; background: white; padding: 1rem; border-radius: 20px; }
+    .filter-btn { background: #e2e8f0; color: #1e293b; border: none; padding: 6px 16px; border-radius: 40px; font-size: 0.8rem; cursor: pointer; transition: 0.2s; }
+    .filter-btn.active { background: #3b82f6; color: white; }
+    .todo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+    .todo-card { background: white; border-radius: 28px; padding: 1.2rem; box-shadow: 0 8px 20px rgba(0,0,0,0.05); transition: 0.2s; border-left: 6px solid #94a3b8; }
+    .todo-card.priority-Cao { border-left-color: #ef4444; }
+    .todo-card.priority-Trung bình { border-left-color: #f59e0b; }
+    .todo-card.priority-Thấp { border-left-color: #10b981; }
+    .todo-card.completed { opacity: 0.7; background: #f8fafc; text-decoration: line-through; }
+    .todo-title { font-size: 1.2rem; font-weight: 600; display: flex; justify-content: space-between; align-items: start; }
+    .badge { font-size: 0.7rem; background: #e2e8f0; padding: 4px 8px; border-radius: 30px; }
+    .todo-meta { margin: 12px 0; display: flex; gap: 12px; font-size: 0.8rem; color: #475569; }
+    .card-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; }
+    .card-actions button { background: none; border: none; font-size: 1.2rem; cursor: pointer; width: auto; padding: 5px; }
+    .delete-btn { color: #ef4444; }
+    .complete-btn { color: #10b981; }
+    i { pointer-events: none; }
+    .loading { text-align: center; padding: 3rem; color: #64748b; }
+    <!-- Thêm vào cuối thẻ <style> -->
+.home-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: white;
+  color: #3b82f6;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  font-size: 1.5rem;
+}
+.home-button:hover {
+  transform: scale(1.1);
+  background: #3b82f6;
+  color: white;
+}
+  </style>
+</head>
+<body>
+  <a href="index.html" class="home-button" title="Quay về trang chủ">
+  <i class="fas fa-home"></i>
+</a>
+<div class="container">
+  <h1><i class="fas fa-clipboard-list"></i> Smart Todo Board</h1>
+  <div class="sub">CRUD + Realtime + Bộ lọc thông minh</div>
+
+  <div class="todo-form">
+    <div class="form-group">
+      <label><i class="fas fa-tasks"></i> Công việc</label>
+      <input type="text" id="taskInput" placeholder="Nhập việc cần làm..." autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label><i class="fas fa-flag"></i> Ưu tiên</label>
+      <select id="prioritySelect">
+        <option>Thấp</option>
+        <option selected>Trung bình</option>
+        <option>Cao</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label><i class="fas fa-tag"></i> Danh mục</label>
+      <select id="categorySelect">
+        <option>Cá nhân</option>
+        <option>Công việc</option>
+        <option>Học tập</option>
+      </select>
+    </div>
+    <button id="addBtn"><i class="fas fa-plus"></i> Thêm todo</button>
+  </div>
+
+  <div class="filters" id="filterGroup">
+    <button data-filter="all" class="filter-btn active">Tất cả</button>
+    <button data-filter="false" class="filter-btn">Chưa hoàn thành</button>
+    <button data-filter="true" class="filter-btn">Hoàn thành</button>
+    <button data-filter="Cao" class="filter-btn">Ưu tiên Cao</button>
+    <button data-filter="Trung bình" class="filter-btn">Ưu tiên TB</button>
+    <button data-filter="Thấp" class="filter-btn">Ưu tiên Thấp</button>
+  </div>
+
+  <div id="todoGrid" class="todo-grid">Đang tải dữ liệu...</div>
+</div>
+
+<script>
+  // ===================== CẤU HÌNH (ĐÃ THAY BẰNG KEY THẬT CỦA BẠN) =====================
+  const SUPABASE_CONFIG = {
+    url: 'https://ulsaoohiyyfwntytxout.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsc2Fvb2hpeXlmd250eXR4b3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyODY4MjUsImV4cCI6MjA5Njg2MjgyNX0.pK66OodAYG4YTk6kUox6IWtqL4c1bHagNs6aMnjQunc'
+  };
+  
+  const TABLE_NAME = 'todo_board';
+  let supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+  let todosData = [];
+  let activeFilter = 'all';
+  
+  const todoGridEl = document.getElementById('todoGrid');
+  const taskInputEl = document.getElementById('taskInput');
+  const prioritySelectEl = document.getElementById('prioritySelect');
+  const categorySelectEl = document.getElementById('categorySelect');
+  const addBtnEl = document.getElementById('addBtn');
+  
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  async function loadTodos() {
+    todoGridEl.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Đang tải...</div>';
+    
+    const { data, error } = await supabaseClient
+      .from(TABLE_NAME)
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Lỗi fetch:', error);
+      todoGridEl.innerHTML = `<div class="loading">⚠️ Lỗi: ${error.message}</div>`;
+      return;
+    }
+    
+    todosData = data || [];
+    renderTodosByFilter();
+  }
+  
+  async function addNewTodo() {
+    const task = taskInputEl.value.trim();
+    if (!task) {
+      alert('Vui lòng nhập nội dung công việc');
+      return;
+    }
+    
+    const newTodo = {
+      task: task,
+      priority: prioritySelectEl.value,
+      category: categorySelectEl.value,
+      is_complete: false
+    };
+    
+    const { error } = await supabaseClient.from(TABLE_NAME).insert([newTodo]);
+    
+    if (error) {
+      alert('Thêm thất bại: ' + error.message);
+      return;
+    }
+    
+    taskInputEl.value = '';
+    await loadTodos();
+  }
+  
+  async function toggleComplete(todoId, currentStatus) {
+    const { error } = await supabaseClient
+      .from(TABLE_NAME)
+      .update({ is_complete: !currentStatus })
+      .eq('id', todoId);
+    
+    if (error) alert('Lỗi cập nhật: ' + error.message);
+    else await loadTodos();
+  }
+  
+  async function deleteTodo(todoId) {
+    if (!confirm('Bạn có chắc muốn xóa công việc này?')) return;
+    
+    const { error } = await supabaseClient.from(TABLE_NAME).delete().eq('id', todoId);
+    if (error) alert('Xóa thất bại: ' + error.message);
+    else await loadTodos();
+  }
+  
+  function renderTodosByFilter() {
+    let filtered = [...todosData];
+    
+    switch (activeFilter) {
+      case 'true': filtered = filtered.filter(t => t.is_complete === true); break;
+      case 'false': filtered = filtered.filter(t => t.is_complete === false); break;
+      case 'Cao': case 'Trung bình': case 'Thấp':
+        filtered = filtered.filter(t => t.priority === activeFilter); break;
+      default: break;
+    }
+    
+    if (filtered.length === 0) {
+      todoGridEl.innerHTML = `<div class="loading">✨ Không có công việc nào phù hợp</div>`;
+      return;
+    }
+    
+    todoGridEl.innerHTML = filtered.map(todo => {
+      const priorityClass = `priority-${todo.priority}`;
+      const completedClass = todo.is_complete ? 'completed' : '';
+      const completeIcon = todo.is_complete ? 'fa-undo-alt' : 'fa-check-circle';
+      
+      return `
+        <div class="todo-card ${priorityClass} ${completedClass}" data-id="${todo.id}">
+          <div class="todo-title">
+            <span>${escapeHtml(todo.task)}</span>
+            <span class="badge">${todo.priority}</span>
+          </div>
+          <div class="todo-meta">
+            <span><i class="fas fa-folder"></i> ${todo.category}</span>
+            <span><i class="far fa-calendar-alt"></i> ${new Date(todo.created_at).toLocaleDateString('vi-VN')}</span>
+          </div>
+          <div class="card-actions">
+            <button class="complete-btn" data-id="${todo.id}" data-complete="${todo.is_complete}">
+              <i class="fas ${completeIcon}"></i>
+            </button>
+            <button class="delete-btn" data-id="${todo.id}">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    document.querySelectorAll('.complete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        const isComplete = btn.getAttribute('data-complete') === 'true';
+        await toggleComplete(id, isComplete);
+      });
+    });
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        await deleteTodo(id);
+      });
+    });
+  }
+  
+  function initFilterButtons() {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.getAttribute('data-filter');
+        renderTodosByFilter();
+      });
+    });
+  }
+  
+  function setupRealtimeSubscription() {
+    const channel = supabaseClient
+      .channel('todo-board-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_NAME }, (payload) => {
+        console.log('🔄 Realtime nhận được thay đổi:', payload.eventType);
+        loadTodos();
+      })
+      .subscribe();
+    return channel;
+  }
+  
+  async function init() {
+    initFilterButtons();
+    addBtnEl.addEventListener('click', addNewTodo);
+    taskInputEl.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNewTodo(); });
+    await loadTodos();
+    setupRealtimeSubscription();
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
+</body>
+</html>

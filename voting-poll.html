@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Realtime Voting Poll | Bình chọn trực tuyến</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      background: white;
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    .sub {
+      color: #64748b;
+    }
+
+    /* Create Poll Form */
+    .create-poll {
+      background: white;
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .create-poll h3 {
+      margin-bottom: 1rem;
+      color: #1e293b;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      color: #475569;
+    }
+
+    input, textarea, button {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.9rem;
+      width: 100%;
+    }
+
+    textarea {
+      resize: vertical;
+      font-family: monospace;
+    }
+
+    .options-input {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .options-input input {
+      flex: 1;
+    }
+
+    .add-option-btn {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      width: auto;
+    }
+
+    .add-option-btn:hover {
+      background: #059669;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+    }
+
+    /* Polls Grid */
+    .polls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .poll-card {
+      background: white;
+      border-radius: 20px;
+      padding: 1.5rem;
+      transition: 0.2s;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .poll-header {
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .poll-question {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    .poll-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .options-list {
+      margin: 1rem 0;
+    }
+
+    .option-item {
+      margin-bottom: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .option-item:hover {
+      transform: translateX(5px);
+    }
+
+    .option-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.3rem;
+      font-size: 0.9rem;
+    }
+
+    .progress-bar {
+      background: #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 30px;
+      position: relative;
+    }
+
+    .progress-fill {
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 10px;
+      color: white;
+      font-size: 0.8rem;
+      font-weight: bold;
+      transition: width 0.5s ease;
+    }
+
+    .vote-count {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-left: 10px;
+    }
+
+    .poll-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .total-votes {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    .delete-poll {
+      background: #ef4444;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+
+    .delete-poll:hover {
+      background: #dc2626;
+    }
+
+    .poll-status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: bold;
+    }
+
+    .status-active {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-expired {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: white;
+    }
+
+    .chart-container {
+      margin-top: 1rem;
+      max-height: 200px;
+    }
+
+    canvas {
+      max-height: 150px;
+    }
+
+    @media (max-width: 768px) {
+      .polls-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .home-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: white;
+  color: #667eea;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  font-size: 1.5rem;
+}
+.home-button:hover {
+  transform: scale(1.1);
+  background: #667eea;
+  color: white;
+}
+  </style>
+</head>
+<body>
+    <a href="index.html" class="home-button" title="Quay về trang chủ">
+  <i class="fas fa-home"></i>
+</a>
+<div class="container">
+  <div class="header">
+    <h1><i class="fas fa-chart-simple"></i> Realtime Voting Poll</h1>
+    <div class="sub">Tạo poll | Bỏ phiếu realtime | Kết quả trực quan</div>
+  </div>
+
+  <!-- Form tạo poll mới -->
+  <div class="create-poll">
+    <h3><i class="fas fa-plus-circle"></i> Tạo Poll mới</h3>
+    <div class="form-group">
+      <label><i class="fas fa-question-circle"></i> Câu hỏi</label>
+      <input type="text" id="question" placeholder="VD: Bạn thích mùa nào nhất?">
+    </div>
+    <div class="form-group">
+      <label><i class="fas fa-list"></i> Các lựa chọn</label>
+      <div id="optionsContainer">
+        <div class="options-input">
+          <input type="text" class="option-input" placeholder="Lựa chọn 1">
+          <input type="text" class="option-input" placeholder="Lựa chọn 2">
+        </div>
+      </div>
+      <button type="button" id="addOptionBtn" class="add-option-btn" style="margin-top: 0.5rem;">
+        <i class="fas fa-plus"></i> Thêm lựa chọn
+      </button>
+    </div>
+    <div class="form-group">
+      <label><i class="fas fa-user"></i> Tạo bởi</label>
+      <input type="text" id="createdBy" placeholder="Tên của bạn" value="Anonymous">
+    </div>
+    <button id="createPollBtn"><i class="fas fa-rocket"></i> Tạo Poll</button>
+  </div>
+
+  <!-- Grid hiển thị các poll -->
+  <div id="pollsGrid" class="polls-grid">Đang tải...</div>
+</div>
+
+<script>
+(function() {
+  // ===== CẤU HÌNH SUPABASE =====
+  const MY_URL = 'https://ulsaoohiyyfwntytxout.supabase.co';
+  const MY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsc2Fvb2hpeXlmd250eXR4b3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyODY4MjUsImV4cCI6MjA5Njg2MjgyNX0.pK66OodAYG4YTk6kUox6IWtqL4c1bHagNs6aMnjQunc';
+  
+  const _supabase = window.supabase.createClient(MY_URL, MY_KEY);
+  
+  // State
+  let polls = [];
+  let userVoted = new Map(); // Lưu các poll đã vote (poll_id -> true)
+  
+  // DOM
+  const pollsGrid = document.getElementById('pollsGrid');
+  const questionInput = document.getElementById('question');
+  const createdByInput = document.getElementById('createdBy');
+  const createBtn = document.getElementById('createPollBtn');
+  const addOptionBtn = document.getElementById('addOptionBtn');
+  const optionsContainer = document.getElementById('optionsContainer');
+  
+  // Chart instances
+  let charts = new Map();
+  
+  // Helper functions
+  function getUserId() {
+    let userId = localStorage.getItem('voter_id');
+    if (!userId) {
+      userId = 'user_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('voter_id', userId);
+    }
+    return userId;
+  }
+  
+  const currentUserId = getUserId();
+  
+  // Load polls từ database
+  async function loadPolls() {
+    pollsGrid.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Đang tải polls...</div>';
+    
+    const { data, error } = await _supabase
+      .from('polls')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      pollsGrid.innerHTML = `<div class="loading">⚠️ Lỗi: ${error.message}</div>`;
+      return;
+    }
+    
+    polls = data || [];
+    
+    // Kiểm tra user đã vote cho từng poll chưa
+    for (let poll of polls) {
+      const { data: voteData } = await _supabase
+        .from('votes')
+        .select('id')
+        .eq('poll_id', poll.id)
+        .eq('user_id', currentUserId)
+        .single();
+      
+      userVoted.set(poll.id, !!voteData);
+    }
+    
+    renderPolls();
+  }
+  
+  // Render tất cả polls
+  function renderPolls() {
+    if (polls.length === 0) {
+      pollsGrid.innerHTML = '<div class="loading">✨ Chưa có poll nào. Hãy tạo poll đầu tiên!</div>';
+      return;
+    }
+    
+    pollsGrid.innerHTML = polls.map(poll => {
+      const options = poll.options || [];
+      const votes = poll.votes || {};
+      const totalVotes = poll.total_votes || 0;
+      const isExpired = new Date(poll.expires_at) < new Date();
+      const isActive = poll.is_active && !isExpired;
+      const hasVoted = userVoted.get(poll.id) || false;
+      
+      return `
+        <div class="poll-card" data-poll-id="${poll.id}">
+          <div class="poll-header">
+            <div class="poll-question">${escapeHtml(poll.question)}</div>
+            <div class="poll-meta">
+              <span><i class="fas fa-user"></i> ${escapeHtml(poll.created_by)}</span>
+              <span class="poll-status ${isActive ? 'status-active' : 'status-expired'}">
+                ${isActive ? 'Đang mở' : 'Đã đóng'}
+              </span>
+            </div>
+          </div>
+          
+          <div class="options-list" id="options-${poll.id}">
+            ${options.map((option, idx) => {
+              const voteCount = votes[`option_${idx}`] || 0;
+              const percentage = totalVotes > 0 ? (voteCount / totalVotes * 100).toFixed(1) : 0;
+              
+              return `
+                <div class="option-item" onclick="window.voteForPoll('${poll.id}', ${idx})">
+                  <div class="option-label">
+                    <span>${escapeHtml(option)}</span>
+                    <span>${voteCount} phiếu (${percentage}%)</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${percentage}%">
+                      ${percentage > 15 ? percentage + '%' : ''}
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          
+          <div class="poll-footer">
+            <div class="total-votes">
+              <i class="fas fa-users"></i> Tổng số phiếu: ${totalVotes}
+            </div>
+            ${hasVoted ? '<span style="color:#10b981; font-size:0.8rem;"><i class="fas fa-check-circle"></i> Đã vote</span>' : ''}
+            <button class="delete-poll" onclick="window.deletePoll('${poll.id}')">
+              <i class="fas fa-trash"></i> Xóa
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  // Hàm vote cho poll
+  window.voteForPoll = async function(pollId, optionIndex) {
+    // Kiểm tra đã vote chưa
+    if (userVoted.get(pollId)) {
+      alert('Bạn đã vote cho poll này rồi!');
+      return;
+    }
+    
+    // Kiểm tra poll còn hoạt động không
+    const poll = polls.find(p => p.id === pollId);
+    if (!poll) return;
+    
+    const isExpired = new Date(poll.expires_at) < new Date();
+    if (!poll.is_active || isExpired) {
+      alert('Poll này đã đóng, không thể vote!');
+      return;
+    }
+    
+    // Thêm vote vào database
+    const { error } = await _supabase
+      .from('votes')
+      .insert([{
+        poll_id: pollId,
+        user_id: currentUserId,
+        option_index: optionIndex
+      }]);
+    
+    if (error) {
+      if (error.code === '23505') { // Unique violation
+        alert('Bạn đã vote cho poll này rồi!');
+        userVoted.set(pollId, true);
+      } else {
+        alert('Lỗi khi vote: ' + error.message);
+      }
+      return;
+    }
+    
+    // Cập nhật state
+    userVoted.set(pollId, true);
+    
+    // Load lại dữ liệu để cập nhật số phiếu
+    await loadPolls();
+  };
+  
+  // Hàm xóa poll
+  window.deletePoll = async function(pollId) {
+    if (confirm('Bạn có chắc muốn xóa poll này không?')) {
+      const { error } = await _supabase
+        .from('polls')
+        .delete()
+        .eq('id', pollId);
+      
+      if (error) {
+        alert('Xóa thất bại: ' + error.message);
+      } else {
+        await loadPolls();
+      }
+    }
+  };
+  
+  // Tạo poll mới
+  async function createPoll() {
+    const question = questionInput.value.trim();
+    const createdBy = createdByInput.value.trim() || 'Anonymous';
+    
+    if (!question) {
+      alert('Vui lòng nhập câu hỏi');
+      return;
+    }
+    
+    // Lấy các option
+    const optionInputs = document.querySelectorAll('.option-input');
+    const options = Array.from(optionInputs)
+      .map(input => input.value.trim())
+      .filter(opt => opt !== '');
+    
+    if (options.length < 2) {
+      alert('Vui lòng nhập ít nhất 2 lựa chọn');
+      return;
+    }
+    
+    // Khởi tạo votes object
+    const initialVotes = {};
+    options.forEach((_, idx) => {
+      initialVotes[`option_${idx}`] = 0;
+    });
+    
+    // Thêm vào database
+    const { error } = await _supabase
+      .from('polls')
+      .insert([{
+        question: question,
+        options: options,
+        votes: initialVotes,
+        total_votes: 0,
+        created_by: createdBy,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      }]);
+    
+    if (error) {
+      alert('Tạo poll thất bại: ' + error.message);
+      return;
+    }
+    
+    // Reset form
+    questionInput.value = '';
+    resetOptionsForm();
+    
+    // Load lại danh sách
+    await loadPolls();
+  }
+  
+  // Reset form options
+  function resetOptionsForm() {
+    optionsContainer.innerHTML = `
+      <div class="options-input">
+        <input type="text" class="option-input" placeholder="Lựa chọn 1">
+        <input type="text" class="option-input" placeholder="Lựa chọn 2">
+      </div>
+    `;
+  }
+  
+  // Thêm option mới
+  function addOption() {
+    const optionsCount = document.querySelectorAll('.option-input').length;
+    if (optionsCount >= 10) {
+      alert('Tối đa 10 lựa chọn');
+      return;
+    }
+    
+    const newDiv = document.createElement('div');
+    newDiv.className = 'options-input';
+    newDiv.innerHTML = `
+      <input type="text" class="option-input" placeholder="Lựa chọn ${optionsCount + 1}">
+      <button type="button" class="remove-option" style="background:#ef4444; width:auto; padding:10px">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    
+    optionsContainer.appendChild(newDiv);
+    
+    // Thêm sự kiện xóa
+    newDiv.querySelector('.remove-option').addEventListener('click', () => {
+      if (document.querySelectorAll('.option-input').length > 2) {
+        newDiv.remove();
+      } else {
+        alert('Phải có ít nhất 2 lựa chọn');
+      }
+    });
+  }
+  
+  // Realtime subscription
+  function setupRealtime() {
+    const channel = _supabase
+      .channel('polls-realtime')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'polls' },
+        async (payload) => {
+          console.log('🔄 Poll thay đổi:', payload.eventType);
+          await loadPolls();
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'votes' },
+        async (payload) => {
+          console.log('🔄 Có vote mới:', payload.eventType);
+          await loadPolls();
+        }
+      )
+      .subscribe();
+    
+    return channel;
+  }
+  
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  
+  // Event listeners
+  createBtn.addEventListener('click', createPoll);
+  addOptionBtn.addEventListener('click', addOption);
+  
+  // Initialize
+  async function init() {
+    await loadPolls();
+    setupRealtime();
+  }
+  
+  init();
+})();
+</script>
+</body>
+</html>

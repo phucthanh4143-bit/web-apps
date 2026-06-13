@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Bookmark & Rating | Sách nói + Bookmark + Đánh giá</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      background: white;
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Form upload */
+    .upload-form {
+      background: white;
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .form-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #475569;
+    }
+
+    input, textarea, button {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.9rem;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+    }
+
+    /* Books Grid */
+    .books-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .book-card {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      transition: 0.2s;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .book-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+    }
+
+    .book-cover {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+
+    .book-info {
+      padding: 1rem;
+    }
+
+    .book-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 0.3rem;
+    }
+
+    .book-author {
+      color: #64748b;
+      font-size: 0.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .rating-stars {
+      margin: 0.5rem 0;
+    }
+
+    .star {
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #cbd5e1;
+      transition: 0.1s;
+    }
+
+    .star.active {
+      color: #fbbf24;
+    }
+
+    .star:hover {
+      transform: scale(1.1);
+    }
+
+    .avg-rating {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-left: 0.5rem;
+    }
+
+    /* Audio Player */
+    .audio-player {
+      background: #f8fafc;
+      padding: 0.8rem;
+      border-radius: 12px;
+      margin: 0.5rem 0;
+    }
+
+    audio {
+      width: 100%;
+      border-radius: 8px;
+    }
+
+    .player-controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .player-controls button {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+
+    .player-controls button:hover {
+      background: #cbd5e1;
+    }
+
+    /* Bookmarks */
+    .bookmarks-section {
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .bookmarks-title {
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .bookmark-item {
+      background: #f1f5f9;
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin-bottom: 0.3rem;
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bookmark-time {
+      font-family: monospace;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .bookmark-note {
+      flex: 1;
+      margin-left: 0.5rem;
+    }
+
+    .delete-bookmark {
+      background: #ef4444;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+    }
+
+    /* Review */
+    .review-section {
+      margin-top: 0.8rem;
+    }
+
+    .review-text {
+      font-size: 0.8rem;
+      color: #475569;
+      font-style: italic;
+    }
+
+    .add-review {
+      display: flex;
+      gap: 0.3rem;
+      margin-top: 0.3rem;
+    }
+
+    .add-review input {
+      flex: 1;
+      font-size: 0.8rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      .books-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .home-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: white;
+  color: #667eea;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  font-size: 1.5rem;
+}
+.home-button:hover {
+  transform: scale(1.1);
+  background: #667eea;
+  color: white;
+}
+  </style>
+</head>
+<body>
+    <a href="index.html" class="home-button" title="Quay về trang chủ">
+  <i class="fas fa-home"></i>
+</a>
+<div class="container">
+  <div class="header">
+    <h1><i class="fas fa-headphones"></i> Audio Bookmark & Rating</h1>
+    <div class="sub">Sách nói | Đánh dấu vị trí | Xếp hạng sao | Realtime</div>
+  </div>
+
+  <!-- Form upload sách mới -->
+  <div class="upload-form">
+    <h3 style="margin-bottom: 1rem;"><i class="fas fa-upload"></i> Thêm sách nói mới</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label><i class="fas fa-book"></i> Tên sách</label>
+        <input type="text" id="bookTitle" placeholder="VD: Clean Code">
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> Tác giả</label>
+        <input type="text" id="bookAuthor" placeholder="VD: Robert Martin">
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-link"></i> URL Audio</label>
+        <input type="text" id="audioUrl" placeholder="https://example.com/audio.mp3">
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-image"></i> URL Ảnh bìa</label>
+        <input type="text" id="coverUrl" placeholder="https://picsum.photos/200/200">
+      </div>
+    </div>
+    <button id="uploadBookBtn"><i class="fas fa-cloud-upload-alt"></i> Thêm sách</button>
+  </div>
+
+  <!-- Grid sách -->
+  <div id="booksGrid" class="books-grid">Đang tải...</div>
+</div>
+
+<script>
+(function() {
+  // ===== CẤU HÌNH SUPABASE =====
+  const MY_URL = 'https://ulsaoohiyyfwntytxout.supabase.co';
+  const MY_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsc2Fvb2hpeXlmd250eXR4b3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyODY4MjUsImV4cCI6MjA5Njg2MjgyNX0.pK66OodAYG4YTk6kUox6IWtqL4c1bHagNs6aMnjQunc';
+  
+  const _supabase = window.supabase.createClient(MY_URL, MY_KEY);
+  
+  // State
+  let books = [];
+  let currentUserId = localStorage.getItem('audio_user_id');
+  if (!currentUserId) {
+    currentUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('audio_user_id', currentUserId);
+  }
+  
+  // Audio elements
+  let audioElements = new Map();
+  
+  // DOM
+  const booksGrid = document.getElementById('booksGrid');
+  const bookTitle = document.getElementById('bookTitle');
+  const bookAuthor = document.getElementById('bookAuthor');
+  const audioUrl = document.getElementById('audioUrl');
+  const coverUrl = document.getElementById('coverUrl');
+  const uploadBtn = document.getElementById('uploadBookBtn');
+  
+  // Helper
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+  
+  // Load books
+  async function loadBooks() {
+    booksGrid.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-pulse"></i> Đang tải sách...</div>';
+    
+    const { data, error } = await _supabase
+      .from('audio_books')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      booksGrid.innerHTML = `<div class="loading">⚠️ Lỗi: ${error.message}</div>`;
+      return;
+    }
+    
+    books = data || [];
+    
+    // Load ratings & bookmarks cho từng sách
+    for (let book of books) {
+      const [ratings, bookmarks] = await Promise.all([
+        _supabase.from('ratings').select('*').eq('book_id', book.id).eq('user_id', currentUserId).single(),
+        _supabase.from('bookmarks').select('*').eq('book_id', book.id).eq('user_id', currentUserId)
+      ]);
+      
+      book.userRating = ratings.data?.rating || 0;
+      book.userReview = ratings.data?.review || '';
+      book.userBookmarks = bookmarks.data || [];
+    }
+    
+    renderBooks();
+  }
+  
+  // Render books
+  function renderBooks() {
+    if (books.length === 0) {
+      booksGrid.innerHTML = '<div class="loading">✨ Chưa có sách nào. Hãy thêm sách đầu tiên!</div>';
+      return;
+    }
+    
+    booksGrid.innerHTML = books.map(book => `
+      <div class="book-card" data-book-id="${book.id}">
+        <img src="${book.cover_url || 'https://picsum.photos/id/100/400/200'}" class="book-cover" alt="${escapeHtml(book.title)}">
+        <div class="book-info">
+          <div class="book-title">${escapeHtml(book.title)}</div>
+          <div class="book-author">${escapeHtml(book.author)}</div>
+          
+          <div class="rating-stars" data-book-id="${book.id}">
+            ${[1,2,3,4,5].map(star => `
+              <i class="fas fa-star star ${book.userRating >= star ? 'active' : ''}" data-rating="${star}"></i>
+            `).join('')}
+            <span class="avg-rating">⭐ ${book.avg_rating || 0} (${book.total_ratings || 0} đánh giá)</span>
+          </div>
+          
+          <div class="audio-player">
+            <audio controls src="${book.audio_url}" id="audio-${book.id}"></audio>
+            <div class="player-controls">
+              <button class="bookmark-btn" data-book-id="${book.id}">
+                <i class="fas fa-bookmark"></i> Đánh dấu tại vị trí hiện tại
+              </button>
+            </div>
+          </div>
+          
+          <div class="bookmarks-section" id="bookmarks-${book.id}">
+            <div class="bookmarks-title"><i class="fas fa-bookmark"></i> Bookmarks của bạn (${book.userBookmarks.length})</div>
+            ${book.userBookmarks.map(bm => `
+              <div class="bookmark-item">
+                <span class="bookmark-time">⏱️ ${formatTime(bm.position_seconds)}</span>
+                <span class="bookmark-note">${escapeHtml(bm.note || 'Không có ghi chú')}</span>
+                <button class="delete-bookmark" data-bookmark-id="${bm.id}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+          
+          <div class="review-section">
+            ${book.userReview ? `<div class="review-text"><i class="fas fa-quote-left"></i> ${escapeHtml(book.userReview)}</div>` : ''}
+            <div class="add-review">
+              <input type="text" class="review-input" placeholder="Viết review..." value="${escapeHtml(book.userReview)}">
+              <button class="save-review-btn" data-book-id="${book.id}"><i class="fas fa-save"></i> Lưu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    
+    // Gắn event listeners
+    document.querySelectorAll('.star').forEach(star => {
+      star.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const bookId = star.closest('.rating-stars').getAttribute('data-book-id');
+        const rating = parseInt(star.getAttribute('data-rating'));
+        await rateBook(bookId, rating);
+      });
+    });
+    
+    document.querySelectorAll('.bookmark-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const bookId = btn.getAttribute('data-book-id');
+        const audio = document.getElementById(`audio-${bookId}`);
+        if (audio) {
+          const position = Math.floor(audio.currentTime);
+          const note = prompt('Ghi chú cho bookmark này (tùy chọn):');
+          await addBookmark(bookId, position, note || '');
+        } else {
+          alert('Không tìm thấy audio player');
+        }
+      });
+    });
+    
+    document.querySelectorAll('.delete-bookmark').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const bookmarkId = btn.getAttribute('data-bookmark-id');
+        if (confirm('Xóa bookmark này?')) {
+          await deleteBookmark(bookmarkId);
+        }
+      });
+    });
+    
+    document.querySelectorAll('.save-review-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const bookId = btn.getAttribute('data-book-id');
+        const reviewInput = btn.parentElement.querySelector('.review-input');
+        const review = reviewInput.value;
+        await saveReview(bookId, review);
+      });
+    });
+  }
+  
+  // Rating
+  async function rateBook(bookId, rating) {
+    const { error } = await _supabase
+      .from('ratings')
+      .upsert({
+        book_id: bookId,
+        user_id: currentUserId,
+        rating: rating
+      }, {
+        onConflict: 'book_id,user_id'
+      });
+    
+    if (error) {
+      alert('Lỗi đánh giá: ' + error.message);
+    } else {
+      await loadBooks();
+    }
+  }
+  
+  // Bookmark
+  async function addBookmark(bookId, position, note) {
+    const { error } = await _supabase
+      .from('bookmarks')
+      .insert({
+        book_id: bookId,
+        user_id: currentUserId,
+        position_seconds: position,
+        note: note
+      });
+    
+    if (error) {
+      alert('Lỗi tạo bookmark: ' + error.message);
+    } else {
+      await loadBooks();
+    }
+  }
+  
+  async function deleteBookmark(bookmarkId) {
+    const { error } = await _supabase
+      .from('bookmarks')
+      .delete()
+      .eq('id', bookmarkId)
+      .eq('user_id', currentUserId);
+    
+    if (error) {
+      alert('Lỗi xóa bookmark: ' + error.message);
+    } else {
+      await loadBooks();
+    }
+  }
+  
+  // Review
+  async function saveReview(bookId, review) {
+    const { error } = await _supabase
+      .from('ratings')
+      .upsert({
+        book_id: bookId,
+        user_id: currentUserId,
+        review: review
+      }, {
+        onConflict: 'book_id,user_id'
+      });
+    
+    if (error) {
+      alert('Lỗi lưu review: ' + error.message);
+    } else {
+      await loadBooks();
+    }
+  }
+  
+  // Upload new book
+  async function uploadBook() {
+    const title = bookTitle.value.trim();
+    const author = bookAuthor.value.trim();
+    const audio = audioUrl.value.trim();
+    const cover = coverUrl.value.trim() || 'https://picsum.photos/id/100/400/200';
+    
+    if (!title || !author || !audio) {
+      alert('Vui lòng điền đầy đủ thông tin (Tên, Tác giả, URL Audio)');
+      return;
+    }
+    
+    const { error } = await _supabase
+      .from('audio_books')
+      .insert([{
+        title: title,
+        author: author,
+        audio_url: audio,
+        cover_url: cover,
+        duration: 0,
+        uploaded_by: currentUserId
+      }]);
+    
+    if (error) {
+      alert('Thêm sách thất bại: ' + error.message);
+      return;
+    }
+    
+    // Reset form
+    bookTitle.value = '';
+    bookAuthor.value = '';
+    audioUrl.value = '';
+    coverUrl.value = '';
+    
+    await loadBooks();
+  }
+  
+  // Realtime
+  function setupRealtime() {
+    const channel = _supabase
+      .channel('audio-realtime')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'audio_books' },
+        () => loadBooks()
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'ratings' },
+        () => loadBooks()
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'bookmarks' },
+        () => loadBooks()
+      )
+      .subscribe();
+    
+    return channel;
+  }
+  
+  // Event listeners
+  uploadBtn.addEventListener('click', uploadBook);
+  
+  // Initialize
+  async function init() {
+    await loadBooks();
+    setupRealtime();
+  }
+  
+  init();
+})();
+</script>
+</body>
+</html>
